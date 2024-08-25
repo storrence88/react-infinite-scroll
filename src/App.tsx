@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+import { useInView } from "react-intersection-observer";
 import { useAsyncList } from "react-stately";
 
 const API_KEY = "40f8h6GzCSmMWYH3aBVw0iywf4u5P5BH5nBHySf8cHVTy4cr98GweNBB";
@@ -50,12 +52,27 @@ function App() {
       const json = (await res.json()) as ImageSearchResponse;
       return {
         items: json.photos,
-        // cursor: json.next,
+        cursor: `${BASE_API_URL}?query=nature&page=${json.page + 1}`,
       };
     },
   });
 
-  console.log(list.items);
+  const { ref, inView } = useInView({
+    rootMargin: "1000px",
+  });
+  const listRef = useRef(list);
+
+  useEffect(() => {
+    listRef.current = list;
+    console.log("Setting current list");
+  }, [list]);
+
+  useEffect(() => {
+    if (listRef.current.items.length && !listRef.current.isLoading && inView) {
+      console.log("Loading more...", Date.now());
+      listRef.current.loadMore();
+    }
+  }, [inView]);
 
   return (
     <main>
@@ -70,7 +87,7 @@ function App() {
           <img src={item.src.original} alt={item.alt} />
         </div>
       ))}
-      <div className="loading"></div>
+      <div ref={ref} className="loading"></div>
     </main>
   );
 }
